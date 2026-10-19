@@ -27,7 +27,16 @@ Route::middleware(['auth:sanctum', 'active.user'])
             });
         }
 
-        Route::apiResource('customers', CustomerController::class);
+        // El vendedor consulta clientes únicamente para asociarlos a una venta.
+        // Las altas, cambios y eliminaciones son funciones administrativas.
+        Route::get('/customers', [CustomerController::class, 'index']);
+        Route::get('/customers/{customer}', [CustomerController::class, 'show']);
+        Route::middleware('role:Administrador')->group(function () {
+            Route::post('/customers', [CustomerController::class, 'store']);
+            Route::put('/customers/{customer}', [CustomerController::class, 'update']);
+            Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+            Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
+        });
         Route::get('/sales', [SaleController::class, 'index']);
         Route::get('/sales/{sale}', [SaleController::class, 'show']);
         Route::post('/sales', [SaleController::class, 'store']);

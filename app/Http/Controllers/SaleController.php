@@ -59,7 +59,12 @@ class SaleController extends Controller
             return $sale;
         });
 
-        return response()->json(['data' => $sale->load(['customer', 'seller:id,name', 'items.book:id,title,isbn'])], 201);
+        $sale->load(['customer', 'seller:id,name', 'items.book:id,title,isbn']);
+
+        return response()->json([
+            'data' => $sale,
+            'invoice' => $this->invoice($sale),
+        ], 201);
     }
 
     public function destroy(Request $request, Sale $sale)
@@ -70,5 +75,25 @@ class SaleController extends Controller
             $sale->delete();
         });
         return response()->json(['message' => 'Venta anulada y existencias restituidas.']);
+    }
+
+    private function invoice(Sale $sale): array
+    {
+        return [
+            'number' => 'FAC-'.str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT),
+            'issued_at' => $sale->created_at?->toIso8601String(),
+            'customer' => $sale->customer?->name ?? 'Consumidor final',
+            'seller' => $sale->seller?->name ?? '—',
+            'items' => $sale->items->map(fn ($item) => [
+                'description' => $item->book?->title ?? 'Libro',
+                'quantity' => $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'discount_percent' => (float) $item->discount_percent,
+                'total' => (float) $item->line_total,
+            ])->values(),
+            'subtotal' => (float) $sale->subtotal,
+            'discount' => (float) $sale->discount_total,
+            'total' => (float) $sale->total,
+        ];
     }
 }
